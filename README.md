@@ -550,6 +550,7 @@ output example
 2. Choose output format and timing level
 3. Click "Generate Subtitles"
 4. Find output file in same folder as input
+5. 3 options are given to export subtitles (json , vtt , srt)
 
 **Star if you find this useful! ⭐**
 ```

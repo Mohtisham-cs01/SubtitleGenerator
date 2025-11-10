@@ -554,3 +554,5 @@ output example
 
 **Star if you find this useful! ⭐**
 ```
+
+Word level subtitle feature will be available soon in srt and vtt format

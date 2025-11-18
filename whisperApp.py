@@ -17,10 +17,11 @@ class SubtitleGeneratorApp:
         self.audio_path = tk.StringVar()
         self.transcript_path = tk.StringVar()
         self.output_path = tk.StringVar()
-        self.model_size = tk.StringVar(value="base")
+        self.model_size = tk.StringVar(value="small")
         self.language = tk.StringVar(value="en")
         self.device = tk.StringVar(value="cuda" if torch.cuda.is_available() else "cpu")
         self.mode = tk.StringVar(value="transcribe")
+        self.subtitle_level = tk.StringVar(value="Phrase")
         
         self.processing = False
         self.result_data = None
@@ -97,6 +98,13 @@ class SubtitleGeneratorApp:
         ttk.Label(settings_frame, text="Output Folder:").grid(row=3, column=0, sticky=tk.W, pady=5, padx=5)
         ttk.Entry(settings_frame, textvariable=self.output_path, width=40).grid(row=3, column=1, sticky=(tk.W, tk.E), pady=5)
         ttk.Button(settings_frame, text="Browse", command=self.browse_output).grid(row=3, column=2, padx=5)
+
+        # Subtitle Level
+        ttk.Label(settings_frame, text="Subtitle Level:").grid(row=4, column=0, sticky=tk.W, pady=5, padx=5)
+        subtitle_combo = ttk.Combobox(settings_frame, textvariable=self.subtitle_level,
+                                      values=["Phrase", "Word"], state="readonly", width=15)
+        subtitle_combo.grid(row=4, column=1, sticky=tk.W, pady=5)
+        
         
         # ===== PROCESS BUTTON =====
         self.process_button = ttk.Button(main_frame, text="Generate Subtitles", 
@@ -406,22 +414,49 @@ class SubtitleGeneratorApp:
     def export_srt(self, filename):
         """Export as SRT format"""
         with open(filename, 'w', encoding='utf-8') as f:
-            for i, segment in enumerate(self.result_data['segments'], 1):
-                start = self.format_timestamp(segment['start'], "srt")
-                end = self.format_timestamp(segment['end'], "srt")
-                f.write(f"{i}\n")
-                f.write(f"{start} --> {end}\n")
-                f.write(f"{segment['text'].strip()}\n\n")
+            if self.subtitle_level.get() == "Word":
+                i = 1
+                for segment in self.result_data['segments']:
+                    if 'words' not in segment:
+                        continue
+                    for word in segment['words']:
+                        if 'start' not in word or 'end' not in word or 'word' not in word:
+                            continue
+                        start = self.format_timestamp(word['start'], "srt")
+                        end = self.format_timestamp(word['end'], "srt")
+                        f.write(f"{i}\n")
+                        f.write(f"{start} --> {end}\n")
+                        f.write(f"{word['word'].strip()}\n\n")
+                        i += 1
+            else:  # Phrase level
+                for i, segment in enumerate(self.result_data['segments'], 1):
+                    start = self.format_timestamp(segment['start'], "srt")
+                    end = self.format_timestamp(segment['end'], "srt")
+                    f.write(f"{i}\n")
+                    f.write(f"{start} --> {end}\n")
+                    f.write(f"{segment['text'].strip()}\n\n")
     
     def export_vtt(self, filename):
         """Export as VTT format"""
         with open(filename, 'w', encoding='utf-8') as f:
             f.write("WEBVTT\n\n")
-            for segment in self.result_data['segments']:
-                start = self.format_timestamp(segment['start'], "vtt")
-                end = self.format_timestamp(segment['end'], "vtt")
-                f.write(f"{start} --> {end}\n")
-                f.write(f"{segment['text'].strip()}\n\n")
+            if self.subtitle_level.get() == "Word":
+                for segment in self.result_data['segments']:
+                    if 'words' not in segment:
+                        continue
+                    for word in segment['words']:
+                        if 'start' not in word or 'end' not in word or 'word' not in word:
+                            continue
+                        start = self.format_timestamp(word['start'], "vtt")
+                        end = self.format_timestamp(word['end'], "vtt")
+                        f.write(f"{start} --> {end}\n")
+                        f.write(f"{word['word'].strip()}\n\n")
+            else:  # Phrase level
+                for segment in self.result_data['segments']:
+                    start = self.format_timestamp(segment['start'], "vtt")
+                    end = self.format_timestamp(segment['end'], "vtt")
+                    f.write(f"{start} --> {end}\n")
+                    f.write(f"{segment['text'].strip()}\n\n")
 
 
 if __name__ == "__main__":
